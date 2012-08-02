@@ -32,9 +32,11 @@ package android.androidVNC;
 import java.io.IOException;
 import java.util.zip.Inflater;
 
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
@@ -123,6 +125,7 @@ public class VncCanvas extends ImageView {
 	 * full-frame coordinates
 	 */
 	int absoluteXPosition = 0, absoluteYPosition = 0;
+	private ProgressDialog mProgressDialog;
 
 	/**
 	 * Constructor used by the inflation apparatus
@@ -136,6 +139,10 @@ public class VncCanvas extends ImageView {
 		handleRREPaint.setStyle(Style.FILL);
 	}
 
+	public void rotateCanvas() {
+		mProgressDialog.cancel();
+	}
+	
 	/**
 	 * Create a view showing a VNC connection
 	 * @param context Containing context (activity)
@@ -147,7 +154,7 @@ public class VncCanvas extends ImageView {
 		this.pendingColorModel = COLORMODEL.valueOf(bean.getColorModel());
 
 		// Startup the RFB thread with a nifty progess dialog
-		final ProgressDialog pd = ProgressDialog.show(getContext(), "Connecting...", "Establishing handshake.\nPlease wait...", true, true, new DialogInterface.OnCancelListener() {
+		mProgressDialog = ProgressDialog.show(getContext(), "Connecting...", "Establishing handshake.\nPlease wait...", true, true, new DialogInterface.OnCancelListener() {
 			@Override
 			public void onCancel(DialogInterface dialog) {
 				closeConnection();
@@ -158,7 +165,7 @@ public class VncCanvas extends ImageView {
 				});
 			}
 		});
-		final Display display = pd.getWindow().getWindowManager().getDefaultDisplay();
+		final Display display = mProgressDialog.getWindow().getWindowManager().getDefaultDisplay();
 		Thread t = new Thread() {
 			public void run() {
 				try {
@@ -166,18 +173,18 @@ public class VncCanvas extends ImageView {
 					doProtocolInitialisation(display.getWidth(), display.getHeight());
 					handler.post(new Runnable() {
 						public void run() {
-							pd.setMessage("Downloading first frame.\nPlease wait...");
+							mProgressDialog.setMessage("Downloading first frame.\nPlease wait...");
 						}
 					});
-					processNormalProtocol(getContext(), pd, setModes);
+					processNormalProtocol(getContext(), mProgressDialog, setModes);
 				} catch (Throwable e) {
 					if (maintainConnection) {
 						Log.e(TAG, e.toString());
 						e.printStackTrace();
 						// Ensure we dismiss the progress dialog
 						// before we fatal error finish
-						if (pd.isShowing())
-							pd.dismiss();
+						if (mProgressDialog.isShowing())
+							mProgressDialog.dismiss();
 						if (e instanceof OutOfMemoryError) {
 							// TODO  Not sure if this will happen but...
 							// figure out how to gracefully notify the user
@@ -467,8 +474,13 @@ public class VncCanvas extends ImageView {
 		//Log.v(TAG, String.format("tap at %f,%f", e.getX(), e.getY()));
 		float scale = getScale();
 		
+		int top = getResources().getDisplayMetrics().heightPixels- getMeasuredHeight();
+		Log.d("AARON", "e ypos: " + e.getY());
 		// Adjust coordinates for Android notification bar.
-		e.offsetLocation(0, -1f * getTop());
+		e.offsetLocation(0, -1f * top);
+		Log.d("AARON", "top: " + getTop());
+		Log.d("AARON", "ypos: " + (absoluteYPosition + e.getY() / scale));
+		Log.d("AARON", "scale: " + scale);
 
 		e.setLocation(absoluteXPosition + e.getX() / scale, absoluteYPosition + e.getY() / scale);
 		
@@ -733,6 +745,18 @@ public class VncCanvas extends ImageView {
 		else
 			msg += ", " + colorModel.toString();
 		Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
+	}
+	
+	public int getFramebufferWidth() {
+		return rfb.framebufferWidth;
+	}
+	
+	public int getFramebufferHeight() {
+		return rfb.framebufferHeight;
+	}
+	
+	public String getDesktopName() {
+		return rfb.desktopName;
 	}
 
 	private String getEncoding() {

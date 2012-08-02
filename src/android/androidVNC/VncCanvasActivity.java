@@ -34,6 +34,7 @@ import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.DialogInterface.OnDismissListener;
+import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.PointF;
@@ -53,7 +54,6 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 import android.widget.AdapterView.OnItemClickListener;
-import android.widget.Button;
 import android.view.inputmethod.InputMethodManager;
 import android.content.Context;
 
@@ -509,7 +509,7 @@ public class VncCanvasActivity extends Activity {
 
 	private MenuItem[] inputModeMenuItems;
 	private AbstractInputHandler inputModeHandlers[];
-	private ConnectionBean connection;
+	private static ConnectionBean connection;
 	private boolean trackballButtonDown;
 	private static final int inputModeIds[] = { R.id.itemInputFitToScreen,
 			R.id.itemInputTouchpad,
@@ -524,10 +524,11 @@ public class VncCanvasActivity extends Activity {
 	public void onCreate(Bundle icicle) {
 
 		super.onCreate(icicle);
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		/*requestWindowFeature(Window.FEATURE_NO_TITLE);
 		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-				WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
+				WindowManager.LayoutParams.FLAG_FULLSCREEN);*/
+		this.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		
 		database = new VncDatabase(this);
 
 		Intent i = getIntent();
@@ -607,12 +608,7 @@ public class VncCanvasActivity extends Activity {
 
 		vncCanvas = (VncCanvas) findViewById(R.id.vnc_canvas);
 		zoomer = (ZoomControls) findViewById(R.id.zoomer);
-
-		vncCanvas.initializeVncCanvas(connection, new Runnable() {
-			public void run() {
-				setModes();
-			}
-		});
+		
 		zoomer.hide();
 		zoomer.setOnZoomInClickListener(new View.OnClickListener() {
 
@@ -640,7 +636,6 @@ public class VncCanvasActivity extends Activity {
 			public void onClick(View v) {
 				showZoomer(true);
 				vncCanvas.scaling.zoomOut(VncCanvasActivity.this);
-
 			}
 
 		});
@@ -655,12 +650,37 @@ public class VncCanvasActivity extends Activity {
 			public void onClick(View v) {
               InputMethodManager inputMgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
               inputMgr.toggleSoftInput(0, 0);
+              vncCanvas.requestFocus();
 			}
 
 		});
 		panner = new Panner(this, vncCanvas.handler);
 
 		inputHandler = getInputHandlerById(R.id.itemInputFitToScreen);
+	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+
+
+		vncCanvas.initializeVncCanvas(connection, new Runnable() {
+			public void run() {
+				setModes();
+
+				
+				if(vncCanvas.getMeasuredWidth() < vncCanvas.getMeasuredHeight() && 
+					vncCanvas.getFramebufferWidth() > vncCanvas.getFramebufferHeight()) {
+					vncCanvas.rotateCanvas();
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+				} else if(vncCanvas.getMeasuredWidth() > vncCanvas.getMeasuredHeight() && 
+					vncCanvas.getFramebufferWidth() < vncCanvas.getFramebufferHeight()) {
+					vncCanvas.rotateCanvas();
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+				}
+				setTitle(vncCanvas.getDesktopName());
+			}
+		});
 	}
 
 	/**
@@ -858,6 +878,10 @@ public class VncCanvasActivity extends Activity {
 		case R.id.itemDisconnect:
 			vncCanvas.closeConnection();
 			finish();
+			return true;
+		case R.id.showKeyboard:
+			InputMethodManager inputMgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+			inputMgr.toggleSoftInput(0, 0);
 			return true;
 		case R.id.itemEnterText:
 			showDialog(R.layout.entertext);
