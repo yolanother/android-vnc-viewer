@@ -2,13 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="android.androidVNC" android:installLocation="auto" android:versionCode="13" android:versionName="0.5.0">
     <application android:icon="@drawable/icon" android:label="androidVNC" android:debuggable="false">
- 		<activity android:label="@string/app_name" android:name="androidVNC" android:screenOrientation="landscape">
+ 		<activity android:label="@string/app_name" android:name="androidVNC">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN"></action>
 				<category android:name="android.intent.category.LAUNCHER"></category>
 			</intent-filter>
 		</activity>
-		<activity android:screenOrientation="landscape" android:configChanges="orientation|keyboardHidden" android:name="VncCanvasActivity">
+		<activity 
+		     android:configChanges="orientation"
+		     android:screenOrientation="nosensor"
+		     android:windowSoftInputMode="stateVisible|adjustResize|adjustPan"
+		     android:name="VncCanvasActivity">
 			<intent-filter>
 				<action android:name="android.intent.action.VIEW"></action>
 			</intent-filter>
@@ -27,7 +31,7 @@
 	</application>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
-    <uses-sdk android:minSdkVersion="3" android:targetSdkVersion="4"></uses-sdk>
+    <uses-sdk android:minSdkVersion="13" android:targetSdkVersion="14"></uses-sdk>
     <supports-screens android:anyDensity="true" />
 
 </manifest> 
